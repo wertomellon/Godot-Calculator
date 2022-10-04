@@ -219,7 +219,7 @@ margin_right = 196.0
 margin_bottom = 192.0
 text = "+"
 
-[node name="Clear" type="Button" parent="Buttons"]
+[node name="Clear" type="Button" parent="Buttons" groups=["clear"]]
 margin_left = 196.0
 margin_right = 260.0
 margin_bottom = 192.0

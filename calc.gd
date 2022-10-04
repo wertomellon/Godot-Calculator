@@ -14,8 +14,10 @@ var answer = []
 var current_num = ""
 #Boolean for checking if the user is in the process of entering a number
 var is_num := false
-#Boolean for flaging an invalid equation
+#Boolean for flaging an invalid input
 var was_invalid := false
+#Boolean for flaging error during calculation
+var bad_calculation := false
 
 #State of the calculator used to disable or enable buttons
 enum STATE{
@@ -25,7 +27,9 @@ enum STATE{
 	FUNCTION,
 	LEFTP,
 	RIGHTP,
-	DECIMAL
+	DECIMAL,
+	UNARY,
+	EQUAL
 }
 
 var state = STATE.OPEN
@@ -59,26 +63,35 @@ func debug_display():
 	get_node("ColorRect").get_node("Output").text = output as String
 	
 	
-	#control_user() is called every frame
-	#Whenever a button is pressed it changes the ENUM stored in the state variable
-	#The state is compared, depending on which state is active, buttons are disabled to prevent the user from making an error
-	#buttons are checked in groups
-	#"func" refers to trig functions like sin and logarithmic functions like ln
-	#"left_p" is ( and {
-	#"right_p" is ) and }
-	#"equal" is =
-	#"unary" is negation and unary operators
-	#"binary" is binary operators like + and *
-	#"decimal" is the decimal
+#control_user() is called every frame
+#Whenever a button is pressed it changes the ENUM stored in the state variable
+#The state is compared, depending on which state is active, buttons are disabled to prevent the user from making an error
+#buttons are checked in groups
+#"func" refers to trig functions like sin and logarithmic functions like ln
+#"left_p" is ( and {
+#"right_p" is ) and }
+#"equal" is =
+#"unary" is negation and unary operators
+#"binary" is binary operators like + and *
+#"decimal" is the decimal
+#"clear" is the clear button
 func control_user():
 	#Activates all buttons to reset previous disable
 	for node in get_node("Buttons").get_children():
 		node.disabled = false
 		
 	#Disables buttons based on state
+	if state == STATE.EQUAL:
+		for node in get_node("Buttons").get_children():
+			if not node.is_in_group("clear"):
+				node.disabled = true
+	if state == STATE.OPEN:
+		for node in get_node("Buttons").get_children():
+			if node.is_in_group("equal") or node.is_in_group("binary") or node.is_in_group("right_p"):
+				node.disabled = true
 	if state == STATE.NUMBER:
 		for node in get_node("Buttons").get_children():
-			if node.is_in_group("func") or node.is_in_group("left_p"):
+			if node.is_in_group("func") or node.is_in_group("left_p") or node.is_in_group("unary"):
 				node.disabled = true
 	if state == STATE.FUNCTION:
 		for node in get_node("Buttons").get_children():
@@ -94,11 +107,15 @@ func control_user():
 				node.disabled = true
 	if state == STATE.RIGHTP:
 		for node in get_node("Buttons").get_children():
-			if node.is_in_group("func") or node.is_in_group("left_p") or node.is_in_group("decimal"):
+			if node.is_in_group("func") or node.is_in_group("left_p") or node.is_in_group("decimal") or node.is_in_group("num") or node.is_in_group("unary"):
 				node.disabled = true
 	if state == STATE.DECIMAL:
 		for node in get_node("Buttons").get_children():
 			if not node.is_in_group("num"):
+				node.disabled = true
+	if state == STATE.UNARY:
+		for node in get_node("Buttons").get_children():
+			if node.is_in_group("binary") or node.is_in_group("right_p") or node.is_in_group("equal"):
 				node.disabled = true
 
 		
@@ -140,7 +157,7 @@ func shunting_yard():
 		#If first token is a number add it to output
 		if internal_equation.front().is_valid_float():
 			output.append(internal_equation.pop_front())
-			
+		
 		#Checks if token is a + or - 
 		elif internal_equation.front() == "+" or internal_equation.front() == "-":
 			#Checks if other operators are in the operator stack is of equal or greater precedence
@@ -150,6 +167,8 @@ func shunting_yard():
 				elif operators.back() == "*" or operators.back() == "/":
 					output.append(operators.pop_back())	
 				elif operators.back() == "^":
+					output.append(operators.pop_back())
+				elif operators.back() == "neg":
 					output.append(operators.pop_back())
 				elif operators.back() == "sin" or operators.back() == "cos" or operators.back() == "cot" or operators.back() == "tan" or operators.back() == "log" or operators.back() == "ln":
 					output.append(operators.pop_back())
@@ -168,6 +187,8 @@ func shunting_yard():
 					output.append(operators.pop_back())	
 				elif operators.back() == "^":
 					output.append(operators.pop_back())
+				elif operators.back() == "neg":
+					output.append(operators.pop_back())
 				elif operators.back() == "sin" or operators.back() == "cos" or operators.back() == "cot" or operators.back() == "tan" or operators.back() == "log" or operators.back() == "ln":
 					output.append(operators.pop_back())
 				else:
@@ -179,7 +200,9 @@ func shunting_yard():
 		elif internal_equation.front() == "^":
 			#Checks if other operators are in the operator stack is of greater precedence
 			while operators.size() > 0:
-				if operators.back() == "sin" or operators.back() == "cos" or operators.back() == "cot" or operators.back() == "tan" or operators.back() == "log" or operators.back() == "ln":
+				if operators.back() == "neg":
+					output.append(operators.pop_back())
+				elif operators.back() == "sin" or operators.back() == "cos" or operators.back() == "cot" or operators.back() == "tan" or operators.back() == "log" or operators.back() == "ln":
 					output.append(operators.pop_back())
 				else:
 					operators.append(internal_equation.pop_front())
@@ -239,9 +262,101 @@ func shunting_yard():
 				break
 			output.append(operators.pop_back())
 		
+		
+		
 
+func evaluate():
+	while output.size() > 0:
+		if bad_calculation:
+			return
+		if output.front().is_valid_float():
+			answer.append(output.pop_front() as float)
+		elif output.front() == "+":
+			output.pop_front()
+			var y = answer.pop_back()
+			var x = answer.pop_back()
+			answer.push_back(add(x,y))
+		elif output.front() == "-":
+			output.pop_front()
+			var y = answer.pop_back()
+			var x = answer.pop_back()
+			answer.push_back(subtract(x,y))
+		elif output.front() == "*":
+			output.pop_front()
+			var y = answer.pop_back()
+			var x = answer.pop_back()
+			answer.push_back(multiply(x,y))
+		elif output.front() == "/":
+			output.pop_front()
+			var y = answer.pop_back()
+			var x = answer.pop_back()
+			answer.push_back(divide(x,y))
+		elif output.front() == "^":
+			output.pop_front()
+			var y = answer.pop_back()
+			var x = answer.pop_back()
+			answer.push_back(exponent(x,y))
+		elif output.front() == "neg":
+			output.pop_front()
+			var x = answer.pop_back()
+			answer.push_back(negate(x))
+		elif output.front() == "cos":
+			output.pop_front()
+			var x = answer.pop_back()
+			answer.push_back(cos(x))
+		elif output.front() == "sin":
+			output.pop_front()
+			var x = answer.pop_back()
+			answer.push_back(sin(x))
+		elif output.front() == "tan":
+			output.pop_front()
+			var x = answer.pop_back()
+			answer.push_back(tan(x))
+		elif output.front() == "cot":
+			output.pop_front()
+			var x = answer.pop_back()
+			answer.push_back(cot(x))
+		elif output.front() == "log":
+			output.pop_front()
+			var x = answer.pop_back()
+			answer.push_back(log10(x))
+		elif output.front() == "ln":
+			output.pop_front()
+			var x = answer.pop_back()
+			answer.push_back(ln(x))
+		
+		
 
+func add(x, y):
+	return x + y
+	
+func subtract(x, y):
+	return x - y
+	
+func multiply(x, y):
+	return x * y
 
+func divide(x, y):
+	if y == 0:
+		bad_calculation = true
+		display_text = "ERROR: divide by zero"
+		return 1
+	return x / y
+
+func exponent(x, y):
+	return  pow(x, y)
+
+func log10(x):
+	return log(x) / log(10)
+
+func ln(x):
+	return log(x)
+	
+func cot(x):
+	return cos(x) / sin(x)
+	
+func negate(x):
+	return x * -1
 
 
 
@@ -250,7 +365,19 @@ func shunting_yard():
 #All buttons set the state depending on the type of symbol to disable some of the buttons for the next input to avoid improper equations
 #display_text is the equation the user sees
 #internal_equation is the actual equation being processed, hidden away from the user
-#For example the following function is for the left bracket button "{"
+#For example the following function is for the equals button
+func _on_Equal_button_down():
+	previously_invalid()
+	state = STATE.EQUAL
+	was_number()
+	shunting_yard()
+	if was_invalid:
+		return
+	evaluate()
+	if bad_calculation:
+		return
+	display_text = answer.pop_back() as String
+
 func _on_LeftBracket_button_down():
 	previously_invalid()
 	state = STATE.LEFTP
@@ -343,7 +470,9 @@ func _on_1_button_down():
 
 func _on_Negative_button_down():
 	previously_invalid()
-	pass # Replace with function body.
+	state = STATE.UNARY
+	display_text += "-"
+	internal_equation.append("neg")
 
 
 func _on_8_button_down():
@@ -476,11 +605,8 @@ func _on_Add_button_down():
 	internal_equation.append("+")
 
 
-func _on_Equal_button_down():
-	previously_invalid()
-	state = STATE.OPEN
-	was_number()
-	shunting_yard()
+
+	
 	
 	
 
