@@ -185,7 +185,7 @@ margin_right = 132.0
 margin_bottom = 128.0
 text = "/"
 
-[node name="Subtract" type="Button" parent="Buttons" groups=["binary"]]
+[node name="Subtract" type="Button" parent="Buttons" groups=["binary", "sub"]]
 margin_left = 68.0
 margin_top = 128.0
 margin_right = 132.0

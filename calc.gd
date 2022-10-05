@@ -18,6 +18,9 @@ var is_num := false
 var was_invalid := false
 #Boolean for flaging error during calculation
 var bad_calculation := false
+const max_int = 9223372036854775807
+const min_int = (-9223372036854775807 - 1)
+#19 digits for max values
 
 #State of the calculator used to disable or enable buttons
 enum STATE{
@@ -95,7 +98,7 @@ func control_user():
 				node.disabled = true
 	if state == STATE.FUNCTION:
 		for node in get_node("Buttons").get_children():
-			if node.is_in_group("binary") or node.is_in_group("left_p") or node.is_in_group("equal"):
+			if node.is_in_group("binary") or node.is_in_group("right_p") or node.is_in_group("equal"):
 				node.disabled = true
 	if state == STATE.OPERATOR:
 		for node in get_node("Buttons").get_children():
@@ -140,6 +143,16 @@ func was_number():
 		if count > 1:
 			invalid_input("ERROR: A number can only have one decimal point")
 			return true
+		if count > 0:
+			if current_num.length() > 17:
+				invalid_input("ERROR: double too large")
+		if current_num.length() > 19:
+			invalid_input("ERROR: integer too large")
+			return true
+		if current_num > "9223372036854775807":
+			invalid_input("ERROR: integer too large")
+			return true
+		
 		#If valid push the number to the stack and clear out the current number so more can be entered
 		internal_equation.append(current_num)
 		current_num = ""
@@ -269,7 +282,9 @@ func evaluate():
 	while output.size() > 0:
 		if bad_calculation:
 			return
-		if output.front().is_valid_float():
+		if output.front().is_valid_integer():
+			answer.append(output.pop_front() as int)
+		elif output.front().is_valid_float():
 			answer.append(output.pop_front() as float)
 		elif output.front() == "+":
 			output.pop_front()
@@ -325,15 +340,43 @@ func evaluate():
 			var x = answer.pop_back()
 			answer.push_back(ln(x))
 		
-		
 
 func add(x, y):
+	if (x > 0 and y > 0) and x + y < 0 :
+		bad_calculation = true
+		display_text = "ERROR: integer overflow"
+		return 1
+	#CONTINUE HERE
+	if (x < 0 and y < 0) and x + y > 0 :
+		bad_calculation = true
+		display_text = "ERROR: integer underflow"
+		return 1
 	return x + y
 	
 func subtract(x, y):
+	if (x < 0 and y > 0) and x - y > 0:
+		bad_calculation = true
+		display_text = "ERROR: integer underflow"
+		return 1
+	if (x > 0 and y < 0) and x - y < 0:
+		bad_calculation = true
+		display_text = "ERROR: integer overflow"
+		return 1
 	return x - y
 	
 func multiply(x, y):
+	if (x < 0 and y > 0) and x * y > 0:
+		bad_calculation = true
+		display_text = "ERROR: integer underflow"
+		return 1
+	if (x > 0 and y < 0) and x * y > 0:
+		bad_calculation = true
+		display_text = "ERROR: integer underflow"
+		return 1
+	if (x > 0 and y > 0) and x * y < 0:
+		bad_calculation = true
+		display_text = "ERROR: integer overflow"
+		return 1
 	return x * y
 
 func divide(x, y):
@@ -341,18 +384,39 @@ func divide(x, y):
 		bad_calculation = true
 		display_text = "ERROR: divide by zero"
 		return 1
+	
 	return x / y
 
 func exponent(x, y):
+	if pow(x,y) == INF:
+		bad_calculation = true
+		display_text = "ERROR: integer overflow"
+		return 1
+	if pow(x,y) == -INF:
+		bad_calculation = true
+		display_text = "ERROR: integer underflow"
+		return 1
 	return  pow(x, y)
 
 func log10(x):
+	if x <= 0:
+		bad_calculation = true
+		display_text = "ERROR: log can only accept numbers > 0"
+		return 1
 	return log(x) / log(10)
 
 func ln(x):
+	if x <= 0:
+		bad_calculation = true
+		display_text = "ERROR: log can only accept numbers > 0"
+		return 1
 	return log(x)
 	
 func cot(x):
+	if sin(x) == 0:
+		bad_calculation = true
+		display_text = "ERROR: divide by zero"
+		return 1
 	return cos(x) / sin(x)
 	
 func negate(x):
@@ -377,12 +441,26 @@ func _on_Equal_button_down():
 	if bad_calculation:
 		return
 	display_text = answer.pop_back() as String
+	
+func _on_Clear_button_down():
+	internal_equation = []
+	operators = []
+	output = []
+	answer = []
+	current_num = ""
+	display_text = ""
+	is_num = false
+	was_invalid = false
+	bad_calculation = false
+	state = STATE.OPEN
+	
 
 func _on_LeftBracket_button_down():
 	previously_invalid()
 	state = STATE.LEFTP
 	display_text += "{"
 	internal_equation.append("{")
+	
 
 
 func _on_Log_button_down():
@@ -399,7 +477,6 @@ func _on_Sin_button_down():
 	display_text += "sin("
 	internal_equation.append("sin")
 	internal_equation.append("(")
-	
 
 
 func _on_Tan_button_down():
@@ -473,6 +550,7 @@ func _on_Negative_button_down():
 	state = STATE.UNARY
 	display_text += "-"
 	internal_equation.append("neg")
+	
 
 
 func _on_8_button_down():
@@ -603,26 +681,3 @@ func _on_Add_button_down():
 	if was_number():
 		return
 	internal_equation.append("+")
-
-
-
-	
-	
-	
-
-func _on_Clear_button_down():
-	internal_equation = []
-	operators = []
-	output = []
-	answer = []
-	current_num = ""
-	display_text = ""
-	is_num = false
-	was_invalid = false
-	state = STATE.OPEN
-	
-
-	
-
-
-
