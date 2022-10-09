@@ -1,0 +1,4 @@
+To run project from command prompt
+1. Change working directory to the project folder ex C:\Users\Keane\Desktop\Godot\Calc>
+2. Call the path of the Godot editor .exe ex "C:\Users\Keane\Desktop\Godot_v3.4.4-stable_win64.exe"
+3. Enjoy
