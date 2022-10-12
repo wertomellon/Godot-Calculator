@@ -1,4 +1,12 @@
-To run project from command prompt
-1. Change working directory to the project folder ex C:\Users\Keane\Desktop\Godot\Calc>
-2. Call the path of the Godot editor .exe ex "C:\Users\Keane\Desktop\Godot_v3.4.4-stable_win64.exe"
-3. Enjoy
+How to run the project from command prompt
+Requires Godot game engine to run
+Godot does not install on a computer, you just run it when you want to use it
+Project was built on Godot version 3.4.4, theortically any 3.X version should work but errors may occur if version is not 3.4.4
+
+1. Change working directory to the project folder.    example C:\Users\Keane\Desktop\Godot\Calc>
+2. Call the file path of the Godot.exe    example "C:\Users\Keane\Desktop\Godot_v3.4.4-stable_win64.exe"
+Thats it
+
+All together the command prompt should look like this
+
+Directory_of_godot_project_folder> "file_path_of_godot.exe"

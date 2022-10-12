@@ -17,6 +17,7 @@ margin_right = 514.0
 margin_bottom = 100.0
 align = 2
 valign = 1
+autowrap = true
 
 [node name="Internal" type="Label" parent="ColorRect"]
 margin_right = 513.0

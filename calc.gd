@@ -49,7 +49,7 @@ func _process(delta):
 	#sets the display text so the user can see what they are entering
 	get_node("ColorRect").get_node("Display").text = display_text
 	#Should be commented out, is for debugging purposes and seeing internal equation
-	debug_display()
+	#debug_display()
 	#disables or enables buttons based on last button pressed
 	control_user()
 	
